@@ -1,0 +1,124 @@
+apiVersion: v1
+data:
+  initdb.sh: |2-
+        #!/bin/bash
+        set -e
+        psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+         CREATE USER mov WITH PASSWORD 'qwerty';
+         CREATE DATABASE mov_db;
+         GRANT ALL PRIVILEGES ON DATABASE mov_db TO mov;
+        EOSQL
+kind: ConfigMap
+metadata:
+  labels:
+    author: lmoyano
+  name: postgres-init-script-configmap-8kt4ffmtf8
+  namespace: foxcorp
+---
+apiVersion: v1
+data:
+  POSTGRES_DB: cG9zdGdyZXM=
+  POSTGRES_PASSWORD: cXdlcnR5
+  POSTGRES_USER: cG9zdGdyZXM=
+kind: Secret
+metadata:
+  labels:
+    app: postgres
+    author: lmoyano
+  name: postgres-secret
+  namespace: foxcorp
+type: Opaque
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: postgres
+    author: lmoyano
+  name: postgres-service
+  namespace: foxcorp
+spec:
+  ports:
+  - name: postgres
+    nodePort: 30432
+    port: 5432
+  selector:
+    app: postgres
+    author: lmoyano
+  type: NodePort
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  labels:
+    app: postgres
+    author: lmoyano
+    type: local
+  name: postgres-volume
+  namespace: foxcorp
+spec:
+  accessModes:
+  - ReadWriteMany
+  capacity:
+    storage: 5Gi
+  hostPath:
+    path: /mnt/data/
+  storageClassName: manual
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: postgres
+    author: lmoyano
+  name: postgres-claim
+  namespace: foxcorp
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: manual
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: postgres
+    author: lmoyano
+  name: postgres-deployment
+  namespace: foxcorp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+      author: lmoyano
+  template:
+    metadata:
+      labels:
+        app: postgres
+        author: lmoyano
+    spec:
+      containers:
+      - envFrom:
+        - secretRef:
+            name: postgres-secret
+        image: postgres:latest
+        imagePullPolicy: IfNotPresent
+        name: postgres
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: postgredb
+        - mountPath: /docker-entrypoint-initdb.d
+          name: init-script
+      volumes:
+      - name: postgredb
+        persistentVolumeClaim:
+          claimName: postgres-claim
+      - configMap:
+          name: postgres-init-script-configmap-8kt4ffmtf8
+        name: init-script

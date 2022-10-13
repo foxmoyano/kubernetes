@@ -1,0 +1,75 @@
+apiVersion: v1
+data:
+  index.html: |
+    hola soy un archivo desde configmap cambiado
+kind: ConfigMap
+metadata:
+  labels:
+    author: lmoyano
+    namespace: foxcorp
+  name: index-html-tmctg4b59k
+  namespace: test
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    author: lmoyano
+    namespace: foxcorp
+  name: nginx
+  namespace: test
+spec:
+  ports:
+  - nodePort: 30000
+    port: 80
+    targetPort: 80
+  selector:
+    author: lmoyano
+    namespace: foxcorp
+    role: nginx
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    author: lmoyano
+    namespace: foxcorp
+  name: nginx
+  namespace: test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      author: lmoyano
+      namespace: foxcorp
+  template:
+    metadata:
+      labels:
+        author: lmoyano
+        namespace: foxcorp
+        role: nginx
+    spec:
+      containers:
+      - image: nginx:1.16-alpine
+        imagePullPolicy: IfNotPresent
+        name: nginx
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 128Mi
+          requests:
+            cpu: 200m
+            memory: 64Mi
+        volumeMounts:
+        - mountPath: /usr/share/nginx/html
+          name: index
+      volumes:
+      - configMap:
+          items:
+          - key: index.html
+            path: index.html
+          name: index-html-tmctg4b59k
+        name: index
