@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - yaml/secret-keycloak.yaml  
+  - yaml/deployment-keycloak.yaml
+  - yaml/service-keycloak.yaml
+
+namespace: foxcorp
+
+configMapGenerator:
+  - name: keycloak-init-configmap
+    files:
+      - realm.json
+      - realm-init.sh
+
+commonLabels:
+  author: lmoyano

@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: jboss/keycloak
+          readinessProbe:
+            httpGet:
+              path: /auth/admin/master/console/
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /auth/admin/master/console/
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          lifecycle:
+            postStart:
+              exec:
+                command: 
+                  - "sh"
+                  - "-c"
+                  - "sleep 30 && sh -c /home/jboss/realm-init.sh"
+          ports:
+          - containerPort: 8080
+          env:
+            - name: KEYCLOAK_USER
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: KUSER
+            - name: KEYCLOAK_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: KPASSWORD
+          volumeMounts:
+            - name: keycloak-init-volume
+              mountPath: /home/jboss
+            - name: tz
+              mountPath: /etc/localtime
+              subPath: Santiago              
+      volumes:
+        - name: keycloak-init-volume
+          configMap:
+            name: keycloak-init-configmap
+            defaultMode: 0777
+        - name: tz
+          configMap:
+            name: tz

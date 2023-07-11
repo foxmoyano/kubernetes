@@ -1,0 +1,15 @@
+{
+  "realm": "foxcorp",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "capacity",
+      "enabled": true,
+      "redirectUris": ["http://localhost"],
+      "protocol": "openid-connect",
+      "bearerOnly": false,
+      "publicClient": false,
+      "directAccessGrantsEnabled": true
+    }
+  ]
+}
